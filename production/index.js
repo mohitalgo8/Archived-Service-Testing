@@ -1,4 +1,4 @@
-import { pool1, pool2 } from "./database.js";
+const { pool1, pool2 } = require("./dbConfig/config");
 
 async function getTables(pool) {
   const [rows] = await pool.query("SHOW TABLES");
@@ -115,4 +115,7 @@ async function migrateData() {
 
 migrateData();
 // Export the migrateData function
-export { migrateData };
+
+module.exports = {
+  migrateData,
+};

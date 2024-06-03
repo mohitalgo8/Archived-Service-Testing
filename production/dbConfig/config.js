@@ -1,14 +1,24 @@
-const mysql = require('mysql2/promise');
+const mysql = require("mysql2/promise");
 
-require('dotenv').config()
+require("dotenv").config();
 
 const dbConfig = {
-  host: "",
-  user: "",
-  password: ""
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  idleTimeout: 600000,
+};
+const dbConfig2 = {
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE2,
+  idleTimeout: 600000,
 };
 
-const pool = mysql.createPool(dbConfig);
+const pool1 = mysql.createPool(dbConfig);
+const pool2 = mysql.createPool(dbConfig2);
 
 const readFromMySQL = async (query) => {
   console.log(query);
@@ -18,14 +28,13 @@ const readFromMySQL = async (query) => {
     connection.release();
     return rows;
   } catch (err) {
-    console.log(err)
-    return []
+    console.log(err);
+    return [];
   }
 };
 
-async function test(){
-    let rrr = await readFromMySQL("SELECT * FROM mainDB.table1")
-    console.log(rrr)
+async function test() {
+  let rrr = await readFromMySQL("SELECT * FROM mab");
 }
 
 // test();
@@ -43,7 +52,7 @@ async function test(){
     ]
 */
 
-
 module.exports = {
-  readFromMySQL,
-}
+  pool1,
+  pool2,
+};

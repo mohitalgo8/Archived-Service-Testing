@@ -1,5 +1,5 @@
-import cron from "node-cron";
-import { migrateData } from "./index.js";
+const cron = require("node-cron");
+const { migrateData } = require("../index.js");
 
 cron.schedule(
   "0 23 * * *",

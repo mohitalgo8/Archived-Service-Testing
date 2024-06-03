@@ -1,4 +1,4 @@
-import { pool1, pool2 } from "./database.js";
+const { pool1, pool2 } = require("./dbConfig/config");
 
 async function getTables(pool) {
   const [rows] = await pool.query("SHOW TABLES");
@@ -44,32 +44,51 @@ async function migrateTableData(
       );
 
       if (data.length === 0) {
-        break; // No more data to migrate
+        break;
       }
 
       // Insert data into archived database
       const columns = Object.keys(data[0]).join(", ");
-      const values = data
-        .map(
-          (row) =>
-            `(${Object.values(row)
-              .map((value) => connection2.escape(value))
-              .join(", ")})`
-        )
-        .join(", ");
-      const insertQuery = `INSERT INTO ${tableName} (${columns}) VALUES ${values}`;
-      await connection2.query(insertQuery);
+      for (const row of data) {
+        try {
+          const values = Object.values(row)
+            .map((value) => connection2.escape(value))
+            .join(", ");
+          const insertQuery = `INSERT INTO ${tableName} (${columns}) VALUES (${values})`;
+          await connection2.query(insertQuery);
+          totalRows++;
+        } catch (error) {
+          if (error.code !== "ER_DUP_ENTRY") {
+            throw error;
+          }
+          console.log(
+            `Duplicate entry skipped for timestamp: ${row.timestamp}`
+          );
+        }
+      }
 
-      // Delete data from active database
-      // const idsToDelete = data.map((row) => row.id);
-      // const deleteQuery = `DELETE FROM ${tableName} WHERE id IN (${idsToDelete.join(", ")})`;
-      // await connection1.query(deleteQuery);
-
-      totalRows += data.length;
       offset += batchSize;
 
+      // Delete data from active database
+      const [allData] = await connection1.query(
+        `SELECT * FROM ${tableName} WHERE timestamp < ? LIMIT ?`,
+        [cutoffDate, batchSize]
+      );
+
+      if (allData.length === 0) {
+        break; // No more data to delete
+      }
+
+      const timestampsToDelete = allData.map((row) =>
+        connection1.escape(row.timestamp)
+      );
+      const deleteQuery = `DELETE FROM ${tableName} WHERE timestamp IN (${timestampsToDelete.join(
+        ", "
+      )})`;
+      await connection1.query(deleteQuery);
+
       console.log(
-        `Migrated ${data.length} rows from table ${tableName}. Total migrated so far: ${totalRows}`
+        `Migrated ${allData.length} rows from table ${tableName}. Total migrated so far: ${totalRows}`
       );
     }
   } catch (error) {
@@ -105,9 +124,11 @@ async function migrateData() {
     await connection2.beginTransaction();
 
     const tables = await getTables(connection1);
-    for (const table of tables) {
-      await migrateTableData(connection1, connection2, table, oneYearAgoStr);
-    }
+    await Promise.all(
+      tables.map((table) =>
+        migrateTableData(connection1, connection2, table, oneYearAgoStr)
+      )
+    );
 
     // Commit transaction for both databases
     await connection1.commit();
@@ -127,4 +148,6 @@ async function migrateData() {
 
 migrateData();
 // Export the migrateData function
-export { migrateData };
+module.exports = {
+  migrateData,
+};

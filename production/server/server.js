@@ -1,19 +1,19 @@
-const express = require('express');
-const { archiveOldData } = require('./archive');
-require('./cronJob'); // Start the cron job
+const express = require("express");
+const { archiveOldData } = require("./");
+require("./cronJob"); // Start the cron job
 
 const app = express();
 
-app.get('/', (req, res) => {
-  res.send('DB Archival Service is running');
+app.get("/", (req, res) => {
+  res.send("DB Archival Service is running");
 });
 
-app.get('/archive-now', async (req, res) => {
+app.get("/archive-now", async (req, res) => {
   try {
     // await archiveOldData();
-    res.send('Data archived successfully');
+    res.send("Data archived successfully");
   } catch (error) {
-    res.status(500).send('Error archiving data: ' + error.message);
+    res.status(500).send("Error archiving data: " + error.message);
   }
 });
 
